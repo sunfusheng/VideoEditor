@@ -1,22 +1,28 @@
 package com.sunfusheng.video.editor.app
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.sunfusheng.video.editor.NativeLib
+import androidx.appcompat.app.AppCompatActivity
+import com.sunfusheng.mvvm.ktx.viewBinding
 import com.sunfusheng.video.editor.app.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
-  private lateinit var binding: ActivityMainBinding
+  private val binding by viewBinding<ActivityMainBinding>()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-
-    binding = ActivityMainBinding.inflate(layoutInflater)
-    setContentView(binding.root)
-
-    val nativeLib = NativeLib()
-    binding.sampleText.text = nativeLib.stringFromJNI()
+    initView()
   }
 
+  private fun initView() {
+    binding.apply {
+      vRecordVideo.apply {
+        setTitle("视频录制")
+        setDividerVisible(false)
+        setOnClickListener {
+
+        }
+      }
+    }
+  }
 }
