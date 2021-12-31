@@ -1,18 +1,20 @@
 plugins {
-  id 'com.android.application'
+  id 'com.android.library'
   id 'kotlin-android'
-  id 'kotlin-kapt'
 }
 
 android {
   compileSdkVersion compile_sdk_version
   defaultConfig {
-    applicationId "com.sunfusheng.video.editor.app"
     minSdkVersion min_sdk_version
     targetSdkVersion target_sdk_version
-    versionCode version_code
-    versionName version_name
     consumerProguardFiles 'consumer-rules.pro'
+
+    externalNativeBuild {
+      cmake {
+        cppFlags ""
+      }
+    }
   }
 
   compileOptions {
@@ -21,11 +23,14 @@ android {
   }
 
   kotlinOptions {
-    jvmTarget = '1.8'
+    jvmTarget = "1.8"
   }
 
-  buildFeatures {
-    viewBinding true
+  externalNativeBuild {
+    cmake {
+      path "src/main/cpp/CMakeLists.txt"
+      version "3.10.2"
+    }
   }
 
   buildTypes {
@@ -37,6 +42,7 @@ android {
 }
 
 dependencies {
-  implementation project(':mvvm')
-  implementation project(':videoeditor')
+  implementation "androidx.core:core-ktx:$androidx_core_version"
+  implementation "androidx.appcompat:appcompat:$appcompat_version"
+  implementation "com.google.android.material:material:$material_version"
 }
