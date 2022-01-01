@@ -32,7 +32,6 @@ class CommonItemView @JvmOverloads constructor(
     vSubtitle = findViewById(R.id.vSubtitle)
     vStatus = findViewById(R.id.vStatus)
     vDivider = findViewById(R.id.vDivider)
-
   }
 
   fun setTitle(title: String?) {
