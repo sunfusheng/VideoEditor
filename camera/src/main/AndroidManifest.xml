@@ -3,7 +3,6 @@
   package="com.sunfusheng.camera">
 
   <uses-permission android:name="android.permission.CAMERA" />
-  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
   <application
     android:allowBackup="true"
@@ -11,7 +10,8 @@
 
     <activity
       android:name=".CameraActivity"
-      android:exported="true" />
+      android:exported="true"
+      android:theme="@style/FullscreenTheme" />
   </application>
 
 </manifest>
