@@ -11,7 +11,7 @@
     <activity
       android:name=".CameraActivity"
       android:exported="true"
-      android:theme="@style/FullscreenTheme" />
+      android:theme="@style/CameraWindowTheme" />
   </application>
 
 </manifest>

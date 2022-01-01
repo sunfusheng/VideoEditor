@@ -6,9 +6,6 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.permissionx.guolindev.PermissionX
 import com.sunfusheng.camera.databinding.ActivityCameraBinding
 import com.sunfusheng.mvvm.base.BaseActivity
@@ -30,22 +27,6 @@ class CameraActivity : BaseActivity() {
     super.onCreate(savedInstanceState)
     requestCameraPermission {
       setupCamera()
-    }
-  }
-
-  override fun onResume() {
-    super.onResume()
-    binding.root.postDelayed({
-      hideSystemUI()
-    }, 500)
-  }
-
-  private fun hideSystemUI() {
-    WindowCompat.setDecorFitsSystemWindows(window, false)
-    WindowInsetsControllerCompat(window, binding.root).let { controller ->
-      controller.hide(WindowInsetsCompat.Type.systemBars())
-      controller.systemBarsBehavior =
-        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
   }
 
