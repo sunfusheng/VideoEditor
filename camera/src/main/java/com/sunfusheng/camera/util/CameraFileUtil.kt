@@ -11,26 +11,35 @@ import java.util.*
  */
 object CameraFileUtil {
 
-  private const val PHOTO_FILENAME = "yyyy-MM-dd-HH-mm-ss-SSS"
-  private const val PHOTO_EXTENSION = ".jpg"
+  private const val PHOTO_DIR = "images"
+  private const val VIDEO_DIR = "videos"
 
-  fun getOutputDirectory(): File {
+  private const val PHOTO_EXTENSION = ".jpg"
+  private const val VIDEO_EXTENSION = ".mp4"
+
+  private val PHOTO_FILENAME_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.CHINA)
+  private val VIDEO_FILENAME_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.CHINA)
+
+  private fun getOutputDirectory(dirName: String): File {
     val context = ContextHolder.context
     val mediaDir = context.externalMediaDirs.firstOrNull()?.let {
-      File(it, "VideoEditor").apply { mkdirs() }
+      File(it, dirName).apply { mkdirs() }
     }
     return if (mediaDir != null && mediaDir.exists())
       mediaDir else context.filesDir
   }
 
-  private fun createFile(baseFolder: File, format: String, extension: String): File {
+  fun getImageFile(): File {
     return File(
-      baseFolder,
-      SimpleDateFormat(format, Locale.CHINA).format(System.currentTimeMillis()) + extension
+      getOutputDirectory(PHOTO_DIR),
+      "IMG_" + PHOTO_FILENAME_FORMAT.format(System.currentTimeMillis()) + PHOTO_EXTENSION
     )
   }
 
-  fun getTakeCaptureFile(): File {
-    return createFile(getOutputDirectory(), PHOTO_FILENAME, PHOTO_EXTENSION)
+  fun getVideoFile(): File {
+    return File(
+      getOutputDirectory(VIDEO_DIR),
+      "VID_" + VIDEO_FILENAME_FORMAT.format(System.currentTimeMillis()) + VIDEO_EXTENSION
+    )
   }
 }

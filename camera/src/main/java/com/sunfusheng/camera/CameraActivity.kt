@@ -14,7 +14,9 @@ import com.permissionx.guolindev.PermissionX
 import com.sunfusheng.camera.databinding.ActivityCameraBinding
 import com.sunfusheng.camera.util.CameraFileUtil
 import com.sunfusheng.mvvm.base.BaseActivity
+import com.sunfusheng.mvvm.ktx.gone
 import com.sunfusheng.mvvm.ktx.viewBinding
+import com.sunfusheng.mvvm.ktx.visible
 import com.sunfusheng.mvvm.util.ToastUtil
 import java.util.concurrent.Executors
 
@@ -86,13 +88,14 @@ class CameraActivity : BaseActivity() {
   fun takePicture() {
     val imageCapture = mImageCapture ?: return
     val outputFileOptions = ImageCapture.OutputFileOptions
-      .Builder(CameraFileUtil.getTakeCaptureFile())
+      .Builder(CameraFileUtil.getImageFile())
       .build()
     imageCapture.takePicture(outputFileOptions, mCameraExecutor,
       object : ImageCapture.OnImageSavedCallback {
         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
           runOnUiThread {
             ToastUtil.toast("${outputFileResults.savedUri}")
+            flash()
           }
         }
 
@@ -100,6 +103,11 @@ class CameraActivity : BaseActivity() {
           Log.e(TAG, "[sfs] take picture error: ${exception.message}")
         }
       })
+  }
+
+  private fun flash() {
+    binding.vFlash.visible()
+    binding.vFlash.postDelayed({ binding.vFlash.gone() }, 50)
   }
 
   fun switchCamera() {
