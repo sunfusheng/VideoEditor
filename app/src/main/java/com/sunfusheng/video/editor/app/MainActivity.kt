@@ -19,7 +19,7 @@ class MainActivity : BaseActivity() {
   private fun initView() {
     binding.apply {
       vRecordVideo.apply {
-        setTitle("拍照/拍视频")
+        setTitle("拍照+录像")
         setDividerVisible(false)
         setOnClickListener {
           startActivity(Intent(this@MainActivity, CameraActivity::class.java))

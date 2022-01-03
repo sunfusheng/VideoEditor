@@ -2,15 +2,21 @@ package com.sunfusheng.camera
 
 import android.Manifest
 import android.os.Bundle
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
+import android.util.Log
+import android.view.Display
+import android.view.Surface
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import com.google.common.util.concurrent.ListenableFuture
 import com.permissionx.guolindev.PermissionX
 import com.sunfusheng.camera.databinding.ActivityCameraBinding
+import com.sunfusheng.camera.util.CameraFileUtil
 import com.sunfusheng.mvvm.base.BaseActivity
 import com.sunfusheng.mvvm.ktx.viewBinding
 import com.sunfusheng.mvvm.util.ToastUtil
+import java.util.concurrent.Executors
 
 /**
  * @author sunfusheng
@@ -20,14 +26,33 @@ class CameraActivity : BaseActivity() {
 
   private val binding by viewBinding<ActivityCameraBinding>()
 
+  private var mCameraProviderFuture: ListenableFuture<ProcessCameraProvider>? = null
   private var mCameraProvider: ProcessCameraProvider? = null
   private var mPreview: Preview? = null
+  private var mCameraSelector: CameraSelector? = null
+  private var mImageAnalysis: ImageAnalysis? = null
+  private var mImageCapture: ImageCapture? = null
+  private var mCamera: Camera? = null
+  private val mCameraExecutor by lazy { Executors.newSingleThreadExecutor() }
+  private var isFrontCamera = false
+  private var mAspectRatio = AspectRatio.RATIO_16_9
+  private var mRotation = Surface.ROTATION_0
+
+  companion object {
+    private const val TAG = "CameraActivity"
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     requestCameraPermission {
+      initView()
       setupCamera()
     }
+  }
+
+  override fun onDestroy() {
+    mCameraExecutor.shutdown()
+    super.onDestroy()
   }
 
   private fun requestCameraPermission(grantedCallback: (() -> Unit)? = null) {
@@ -39,7 +64,7 @@ class CameraActivity : BaseActivity() {
             if (allGranted) {
               grantedCallback?.invoke()
             } else {
-              ToastUtil.show("权限未通过，已退出")
+              ToastUtil.toast("权限未通过，已退出")
               finish()
             }
           }
@@ -49,20 +74,120 @@ class CameraActivity : BaseActivity() {
     }
   }
 
-  private fun setupCamera() {
-    val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-    cameraProviderFuture.addListener({
-      mCameraProvider = cameraProviderFuture.get()
-      mPreview = Preview.Builder().build()
-        .apply {
-          setSurfaceProvider(binding.vPreviewView.surfaceProvider)
+  private fun initView() {
+    binding.vTakePicture.setOnClickListener {
+      takePicture()
+    }
+    binding.vSwitchCamera.setOnClickListener {
+      switchCamera()
+    }
+  }
+
+  fun takePicture() {
+    val imageCapture = mImageCapture ?: return
+    val outputFileOptions = ImageCapture.OutputFileOptions
+      .Builder(CameraFileUtil.getTakeCaptureFile())
+      .build()
+    imageCapture.takePicture(outputFileOptions, mCameraExecutor,
+      object : ImageCapture.OnImageSavedCallback {
+        override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+          runOnUiThread {
+            ToastUtil.toast("${outputFileResults.savedUri}")
+          }
         }
-      val cameraSelector =
-        CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
-      mCameraProvider?.apply {
-        unbindAll()
-        bindToLifecycle(this@CameraActivity, cameraSelector, mPreview)
-      }
+
+        override fun onError(exception: ImageCaptureException) {
+          Log.e(TAG, "[sfs] take picture error: ${exception.message}")
+        }
+      })
+  }
+
+  fun switchCamera() {
+    isFrontCamera = !isFrontCamera
+    bindCamera()
+  }
+
+  private fun setupCamera() {
+    mCameraProviderFuture = ProcessCameraProvider.getInstance(this)
+    mCameraProviderFuture?.addListener({
+      mCameraProvider = mCameraProviderFuture?.get()
+      bindCamera()
     }, ContextCompat.getMainExecutor(this))
+  }
+
+  private fun bindCamera() {
+    val cameraProvider = mCameraProvider
+    if (cameraProvider == null) {
+      Log.e(TAG, "[sfs] bindCamera() Camera init failed")
+      return
+    }
+
+    initAspectRatio()
+    initRotation()
+    val preview = getPreview()
+    val cameraSelector = getCameraSelector()
+    val imageAnalysis = getImageAnalysis()
+    val imageCapture = getImageCapture()
+    cameraProvider.unbindAll()
+    mCamera = cameraProvider.bindToLifecycle(
+      this as LifecycleOwner,
+      cameraSelector,
+      preview,
+      imageAnalysis,
+      imageCapture
+    )
+  }
+
+  private fun initAspectRatio() {
+    mAspectRatio = AspectRatio.RATIO_16_9
+  }
+
+  private fun initRotation() {
+    val display: Display? = binding.vPreviewView.display
+    mRotation = display?.rotation ?: Surface.ROTATION_0
+  }
+
+  private fun getPreview(): Preview {
+    mPreview = Preview.Builder()
+      .setTargetAspectRatio(mAspectRatio)
+      .setTargetRotation(mRotation)
+      .build()
+      .also {
+        it.setSurfaceProvider(binding.vPreviewView.surfaceProvider)
+      }
+    return mPreview!!
+  }
+
+  private fun getCameraSelector(): CameraSelector {
+    var lensFacing = CameraSelector.LENS_FACING_BACK
+    if (isFrontCamera) {
+      lensFacing = CameraSelector.LENS_FACING_FRONT
+    }
+    mCameraSelector = CameraSelector.Builder()
+      .requireLensFacing(lensFacing)
+      .build()
+    return mCameraSelector!!
+  }
+
+  private fun getImageAnalysis(): ImageAnalysis {
+    mImageAnalysis = ImageAnalysis.Builder()
+      .setTargetAspectRatio(mAspectRatio)
+      .setTargetRotation(mRotation)
+      .build()
+      .also {
+        it.setAnalyzer(mCameraExecutor, { imageProxy ->
+          imageProxy.close()
+        })
+      }
+    return mImageAnalysis!!
+  }
+
+  private fun getImageCapture(): ImageCapture {
+    mImageCapture = ImageCapture.Builder()
+      .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+      .setTargetAspectRatio(mAspectRatio)
+      .setTargetRotation(mRotation)
+      .build()
+    return mImageCapture!!
   }
 }
