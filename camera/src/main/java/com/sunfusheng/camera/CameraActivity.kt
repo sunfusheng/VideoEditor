@@ -41,8 +41,10 @@ class CameraActivity : BaseActivity() {
   private var mCamera: Camera? = null
   private val mCameraExecutor by lazy { Executors.newSingleThreadExecutor() }
   private var isFrontCamera = false
-  private val mScreenWidth by lazy { ScreenUtil.getScreenWidth() }
-  private val mScreenHeight by lazy { ScreenUtil.getScreenHeight() }
+  private val mScreenWidth by lazy { ScreenUtil.getRealScreenWidth() }
+  private val mScreenHeight by lazy { ScreenUtil.getRealScreenHeight() }
+  private val mScreenHeight_16_9 = mScreenWidth * 16 / 9
+  private val mScreenHeight_4_3 = mScreenWidth * 4 / 3
   private var mPreviewRatio = PreviewRatio.RATIO_FULL_SCREEN
   private var mPreviewWidth = mScreenWidth
   private var mPreviewHeight = mScreenHeight
@@ -54,7 +56,6 @@ class CameraActivity : BaseActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    windowManager
     requestCameraPermission {
       initData()
       initView()
@@ -105,7 +106,14 @@ class CameraActivity : BaseActivity() {
 
   private fun resizePreviewHeight() {
     initPreviewRatio()
-    val topMargin = (mScreenHeight - mPreviewHeight) / 2
+    val topMargin = when (mPreviewRatio) {
+      PreviewRatio.RATIO_FULL_SCREEN -> 0
+      PreviewRatio.RATIO_16_9 -> (mScreenHeight - mScreenHeight_16_9) * 3 / 5
+      PreviewRatio.RATIO_4_3 -> (mScreenHeight - mScreenHeight_16_9) * 3 / 5
+      PreviewRatio.RATIO_1_1 -> (mScreenHeight - mScreenWidth) / 3
+      else -> (mScreenHeight - mPreviewHeight) / 2
+    }
+    Log.d(TAG, "[sfs] topMargin:$topMargin")
     binding.vPreviewContainer.apply {
       val params = layoutParams as RelativeLayout.LayoutParams
       params.height = mPreviewHeight
@@ -117,26 +125,26 @@ class CameraActivity : BaseActivity() {
   private fun changePreviewRatio() {
     when (mPreviewRatio) {
       PreviewRatio.RATIO_FULL_SCREEN -> {
-        binding.vChangePreviewRatio.text = "16:9"
         mPreviewRatio = PreviewRatio.RATIO_16_9
+        binding.vChangePreviewRatio.text = "16:9"
         resizePreviewHeight()
         bindCamera()
       }
       PreviewRatio.RATIO_16_9 -> {
-        binding.vChangePreviewRatio.text = "4:3"
         mPreviewRatio = PreviewRatio.RATIO_4_3
+        binding.vChangePreviewRatio.text = "4:3"
         resizePreviewHeight()
         bindCamera()
       }
       PreviewRatio.RATIO_4_3 -> {
-        binding.vChangePreviewRatio.text = "1:1"
         mPreviewRatio = PreviewRatio.RATIO_1_1
+        binding.vChangePreviewRatio.text = "1:1"
         resizePreviewHeight()
         bindCamera()
       }
       PreviewRatio.RATIO_1_1 -> {
-        binding.vChangePreviewRatio.text = "全屏"
         mPreviewRatio = PreviewRatio.RATIO_FULL_SCREEN
+        binding.vChangePreviewRatio.text = "全屏"
         resizePreviewHeight()
         bindCamera()
       }
@@ -207,8 +215,8 @@ class CameraActivity : BaseActivity() {
   private fun initPreviewRatio() {
     mPreviewWidth = mScreenWidth
     mPreviewHeight = when (mPreviewRatio) {
-      PreviewRatio.RATIO_16_9 -> mScreenWidth * 16 / 9
-      PreviewRatio.RATIO_4_3 -> mScreenWidth * 4 / 3
+      PreviewRatio.RATIO_16_9 -> mScreenHeight_16_9
+      PreviewRatio.RATIO_4_3 -> mScreenHeight_4_3
       PreviewRatio.RATIO_1_1 -> mScreenWidth
       else -> mScreenHeight
     }
