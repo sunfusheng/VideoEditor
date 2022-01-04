@@ -3,20 +3,24 @@ package com.sunfusheng.camera
 import android.Manifest
 import android.os.Bundle
 import android.util.Log
+import android.util.Size
 import android.view.Display
 import android.view.Surface
+import android.widget.RelativeLayout
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
 import com.permissionx.guolindev.PermissionX
+import com.sunfusheng.camera.config.PreviewRatio
 import com.sunfusheng.camera.databinding.ActivityCameraBinding
 import com.sunfusheng.camera.util.CameraFileUtil
 import com.sunfusheng.mvvm.base.BaseActivity
 import com.sunfusheng.mvvm.ktx.gone
 import com.sunfusheng.mvvm.ktx.viewBinding
 import com.sunfusheng.mvvm.ktx.visible
+import com.sunfusheng.mvvm.util.ScreenUtil
 import com.sunfusheng.mvvm.util.ToastUtil
 import java.util.concurrent.Executors
 
@@ -37,7 +41,11 @@ class CameraActivity : BaseActivity() {
   private var mCamera: Camera? = null
   private val mCameraExecutor by lazy { Executors.newSingleThreadExecutor() }
   private var isFrontCamera = false
-  private var mAspectRatio = AspectRatio.RATIO_16_9
+  private val mScreenWidth by lazy { ScreenUtil.getScreenWidth() }
+  private val mScreenHeight by lazy { ScreenUtil.getScreenHeight() }
+  private var mPreviewRatio = PreviewRatio.RATIO_FULL_SCREEN
+  private var mPreviewWidth = mScreenWidth
+  private var mPreviewHeight = mScreenHeight
   private var mRotation = Surface.ROTATION_0
 
   companion object {
@@ -46,7 +54,9 @@ class CameraActivity : BaseActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    windowManager
     requestCameraPermission {
+      initData()
       initView()
       setupCamera()
     }
@@ -76,12 +86,60 @@ class CameraActivity : BaseActivity() {
     }
   }
 
+  private fun initData() {
+
+  }
+
   private fun initView() {
+    resizePreviewHeight()
     binding.vTakePicture.setOnClickListener {
       takePicture()
     }
     binding.vSwitchCamera.setOnClickListener {
       switchCamera()
+    }
+    binding.vChangePreviewRatio.setOnClickListener {
+      changePreviewRatio()
+    }
+  }
+
+  private fun resizePreviewHeight() {
+    initPreviewRatio()
+    val topMargin = (mScreenHeight - mPreviewHeight) / 2
+    binding.vPreviewContainer.apply {
+      val params = layoutParams as RelativeLayout.LayoutParams
+      params.height = mPreviewHeight
+      params.topMargin = topMargin
+      layoutParams = params
+    }
+  }
+
+  private fun changePreviewRatio() {
+    when (mPreviewRatio) {
+      PreviewRatio.RATIO_FULL_SCREEN -> {
+        binding.vChangePreviewRatio.text = "16:9"
+        mPreviewRatio = PreviewRatio.RATIO_16_9
+        resizePreviewHeight()
+        bindCamera()
+      }
+      PreviewRatio.RATIO_16_9 -> {
+        binding.vChangePreviewRatio.text = "4:3"
+        mPreviewRatio = PreviewRatio.RATIO_4_3
+        resizePreviewHeight()
+        bindCamera()
+      }
+      PreviewRatio.RATIO_4_3 -> {
+        binding.vChangePreviewRatio.text = "1:1"
+        mPreviewRatio = PreviewRatio.RATIO_1_1
+        resizePreviewHeight()
+        bindCamera()
+      }
+      PreviewRatio.RATIO_1_1 -> {
+        binding.vChangePreviewRatio.text = "全屏"
+        mPreviewRatio = PreviewRatio.RATIO_FULL_SCREEN
+        resizePreviewHeight()
+        bindCamera()
+      }
     }
   }
 
@@ -130,7 +188,7 @@ class CameraActivity : BaseActivity() {
       return
     }
 
-    initAspectRatio()
+    initPreviewRatio()
     initRotation()
     val preview = getPreview()
     val cameraSelector = getCameraSelector()
@@ -146,8 +204,14 @@ class CameraActivity : BaseActivity() {
     )
   }
 
-  private fun initAspectRatio() {
-    mAspectRatio = AspectRatio.RATIO_16_9
+  private fun initPreviewRatio() {
+    mPreviewWidth = mScreenWidth
+    mPreviewHeight = when (mPreviewRatio) {
+      PreviewRatio.RATIO_16_9 -> mScreenWidth * 16 / 9
+      PreviewRatio.RATIO_4_3 -> mScreenWidth * 4 / 3
+      PreviewRatio.RATIO_1_1 -> mScreenWidth
+      else -> mScreenHeight
+    }
   }
 
   private fun initRotation() {
@@ -157,7 +221,7 @@ class CameraActivity : BaseActivity() {
 
   private fun getPreview(): Preview {
     mPreview = Preview.Builder()
-      .setTargetAspectRatio(mAspectRatio)
+      .setTargetResolution(Size(mPreviewWidth, mPreviewHeight))
       .setTargetRotation(mRotation)
       .build()
       .also {
@@ -179,7 +243,7 @@ class CameraActivity : BaseActivity() {
 
   private fun getImageAnalysis(): ImageAnalysis {
     mImageAnalysis = ImageAnalysis.Builder()
-      .setTargetAspectRatio(mAspectRatio)
+      .setTargetResolution(Size(mPreviewWidth, mPreviewHeight))
       .setTargetRotation(mRotation)
       .build()
       .also {
@@ -193,7 +257,7 @@ class CameraActivity : BaseActivity() {
   private fun getImageCapture(): ImageCapture {
     mImageCapture = ImageCapture.Builder()
       .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-      .setTargetAspectRatio(mAspectRatio)
+      .setTargetResolution(Size(mPreviewWidth, mPreviewHeight))
       .setTargetRotation(mRotation)
       .build()
     return mImageCapture!!

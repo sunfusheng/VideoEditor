@@ -23,15 +23,14 @@ class CommonItemView @JvmOverloads constructor(
 
   val vTitle: TextView
   val vSubtitle: TextView
-  val vStatus: TextView
   val vDivider: View
 
   init {
     LayoutInflater.from(context).inflate(R.layout.layout_common_item_view, this)
-    vTitle = findViewById(R.id.vTitle)
-    vSubtitle = findViewById(R.id.vSubtitle)
-    vStatus = findViewById(R.id.vStatus)
-    vDivider = findViewById(R.id.vDivider)
+    vTitle = findViewById(R.id.v_title)
+    vSubtitle = findViewById(R.id.v_subtitle)
+    vDivider = findViewById(R.id.v_divider)
+    vSubtitle.gone()
   }
 
   fun setTitle(title: String?) {
@@ -44,15 +43,6 @@ class CommonItemView @JvmOverloads constructor(
     } else {
       vSubtitle.visible()
       vSubtitle.text = subtitle
-    }
-  }
-
-  fun setStatus(status: String?) {
-    if (TextUtils.isEmpty(status)) {
-      vStatus.gone()
-    } else {
-      vStatus.visible()
-      vStatus.text = status
     }
   }
 
