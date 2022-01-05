@@ -9,6 +9,7 @@ import android.view.Surface
 import android.widget.RelativeLayout
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
@@ -97,6 +98,7 @@ class CameraActivity : BaseActivity() {
       takePicture()
     }
     binding.vSwitchCamera.setOnClickListener {
+      showPlaceholderImage(true)
       switchCamera()
     }
     binding.vChangePreviewRatio.setOnClickListener {
@@ -127,24 +129,28 @@ class CameraActivity : BaseActivity() {
       PreviewRatio.RATIO_FULL_SCREEN -> {
         mPreviewRatio = PreviewRatio.RATIO_16_9
         binding.vChangePreviewRatio.text = "16:9"
+        showPlaceholderImage(true)
         resizePreviewHeight()
         bindCamera()
       }
       PreviewRatio.RATIO_16_9 -> {
         mPreviewRatio = PreviewRatio.RATIO_4_3
         binding.vChangePreviewRatio.text = "4:3"
+        showPlaceholderImage(true)
         resizePreviewHeight()
         bindCamera()
       }
       PreviewRatio.RATIO_4_3 -> {
         mPreviewRatio = PreviewRatio.RATIO_1_1
         binding.vChangePreviewRatio.text = "1:1"
+        showPlaceholderImage(true)
         resizePreviewHeight()
         bindCamera()
       }
       PreviewRatio.RATIO_1_1 -> {
         mPreviewRatio = PreviewRatio.RATIO_FULL_SCREEN
         binding.vChangePreviewRatio.text = "全屏"
+        showPlaceholderImage(true)
         resizePreviewHeight()
         bindCamera()
       }
@@ -210,6 +216,7 @@ class CameraActivity : BaseActivity() {
       imageAnalysis,
       imageCapture
     )
+    observeCameraState(mCamera?.cameraInfo)
   }
 
   private fun initPreviewRatio() {
@@ -269,5 +276,104 @@ class CameraActivity : BaseActivity() {
       .setTargetRotation(mRotation)
       .build()
     return mImageCapture!!
+  }
+
+  var startTime = 0L
+
+  private fun showPlaceholderImage(show: Boolean) {
+    binding.apply {
+      if (show) {
+        startTime = System.currentTimeMillis()
+        val bitmap = vPreviewView.bitmap//BitmapBlurUtil.blur(vPreviewView.bitmap)
+        Log.e(TAG, "[sfs] get bitmap time: ${System.currentTimeMillis() - startTime}")
+        vPlaceholder.visible()
+        vPlaceholder.setImageBitmap(bitmap)
+        vFlash.visible()
+        vFlash.setBackgroundColor(resources.getColor(R.color.transparent30_white))
+      } else {
+        Log.e(TAG, "[sfs] switch camera time: ${System.currentTimeMillis() - startTime}")
+        vPlaceholder.gone()
+        vPlaceholder.setImageBitmap(null)
+        vFlash.gone()
+        vFlash.setBackgroundColor(resources.getColor(R.color.white))
+      }
+    }
+  }
+
+  private var hasObserveCameraState = false
+
+  private fun observeCameraState(cameraInfo: CameraInfo?) {
+    if (hasObserveCameraState) {
+      return
+    }
+    if (cameraInfo == null) {
+      Log.e(TAG, "[sfs] CameraState: cameraInfo is null")
+      return
+    }
+    hasObserveCameraState = true
+    binding.vPreviewView.previewStreamState.observe(this as LifecycleOwner) { previewStreamState ->
+      previewStreamState?.also {
+        when (it) {
+          PreviewView.StreamState.IDLE -> {
+            Log.d(TAG, "[sfs] PreviewStreamState: Idle")
+          }
+          PreviewView.StreamState.STREAMING -> {
+            Log.d(TAG, "[sfs] PreviewStreamState: Streaming")
+            showPlaceholderImage(false)
+          }
+        }
+      }
+    }
+    cameraInfo.cameraState.observe(this as LifecycleOwner) { cameraState ->
+      run {
+        when (cameraState.type) {
+          CameraState.Type.PENDING_OPEN -> {
+            Log.d(TAG, "[sfs] CameraState: Pending Open")
+          }
+          CameraState.Type.OPENING -> {
+            Log.d(TAG, "[sfs] CameraState: Opening")
+          }
+          CameraState.Type.OPEN -> {
+            Log.d(TAG, "[sfs] CameraState: Open")
+          }
+          CameraState.Type.CLOSING -> {
+            Log.d(TAG, "[sfs] CameraState: Closing")
+          }
+          CameraState.Type.CLOSED -> {
+            Log.d(TAG, "[sfs] CameraState: Closed")
+          }
+        }
+      }
+
+      cameraState.error?.let { error ->
+        when (error.code) {
+          // Open errors
+          CameraState.ERROR_STREAM_CONFIG -> {
+            Log.e(TAG, "[sfs] CameraErrorState: Stream config error")
+          }
+          // Opening errors
+          CameraState.ERROR_CAMERA_IN_USE -> {
+            Log.e(TAG, "[sfs] CameraErrorState: Camera in use")
+          }
+          CameraState.ERROR_MAX_CAMERAS_IN_USE -> {
+            Log.e(TAG, "[sfs] CameraErrorState: Max cameras in use")
+          }
+          CameraState.ERROR_OTHER_RECOVERABLE_ERROR -> {
+            Log.e(TAG, "[sfs] CameraErrorState: Other recoverable error")
+          }
+          // Closing errors
+          CameraState.ERROR_CAMERA_DISABLED -> {
+            Log.e(TAG, "[sfs] CameraErrorState: Camera disabled")
+          }
+          CameraState.ERROR_CAMERA_FATAL_ERROR -> {
+            Log.e(TAG, "[sfs] CameraErrorState: Fatal error")
+          }
+          // Closed errors
+          CameraState.ERROR_DO_NOT_DISTURB_MODE_ENABLED -> {
+            Log.e(TAG, "[sfs] CameraErrorState: Do not disturb mode enabled")
+          }
+        }
+      }
+    }
   }
 }
