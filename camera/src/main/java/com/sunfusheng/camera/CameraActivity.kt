@@ -1,6 +1,7 @@
 package com.sunfusheng.camera
 
 import android.Manifest
+import android.animation.ValueAnimator
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
@@ -19,6 +20,7 @@ import com.sunfusheng.camera.databinding.ActivityCameraBinding
 import com.sunfusheng.camera.util.CameraFileUtil
 import com.sunfusheng.mvvm.base.BaseActivity
 import com.sunfusheng.mvvm.ktx.gone
+import com.sunfusheng.mvvm.ktx.invisible
 import com.sunfusheng.mvvm.ktx.viewBinding
 import com.sunfusheng.mvvm.ktx.visible
 import com.sunfusheng.mvvm.util.ScreenUtil
@@ -49,6 +51,9 @@ class CameraActivity : BaseActivity() {
   private var mPreviewRatio = PreviewRatio.RATIO_FULL_SCREEN
   private var mPreviewWidth = mScreenWidth
   private var mPreviewHeight = mScreenHeight
+  private var mLastPreviewHeight = mPreviewHeight
+  private var mTopMargin = 0
+  private var mLastTopMargin = 0
   private var mRotation = Surface.ROTATION_0
 
   companion object {
@@ -89,72 +94,148 @@ class CameraActivity : BaseActivity() {
   }
 
   private fun initData() {
-
+    mPreviewWidth = mScreenWidth
+    mPreviewHeight = getPreviewHeightByRatio(mPreviewRatio)
+    mLastPreviewHeight = mPreviewHeight
+    mTopMargin = getPreviewContainerTopMargin(mPreviewRatio)
+    mLastTopMargin = mTopMargin
   }
 
   private fun initView() {
-    resizePreviewHeight()
-    binding.vTakePicture.setOnClickListener {
-      takePicture()
-    }
-    binding.vSwitchCamera.setOnClickListener {
-      showPlaceholderImage(true)
-      switchCamera()
-    }
-    binding.vChangePreviewRatio.setOnClickListener {
-      changePreviewRatio()
+    resizePreviewHeight(false)
+    binding.apply {
+      vTakePicture.setOnClickListener {
+        takePicture()
+      }
+      vSwitchCamera.setOnClickListener {
+        showPlaceholderImage(true)
+        switchCamera()
+      }
+      vChangePreviewRatio.setOnClickListener {
+        changePreviewRatio()
+      }
+      vVideoCapture.setOnClickListener {
+
+      }
     }
   }
 
-  private fun resizePreviewHeight() {
-    initPreviewRatio()
-    val topMargin = when (mPreviewRatio) {
+  var startTime = 0L
+
+  private fun showPlaceholderImage(show: Boolean) {
+    binding.apply {
+      if (show) {
+        startTime = System.currentTimeMillis()
+        val bitmap = vPreviewView.bitmap
+        vPlaceholder.visible()
+        vPlaceholder.setImageBitmap(bitmap)
+        vPreviewView.invisible()
+      } else {
+        Log.e(TAG, "[sfs] switch camera time: ${System.currentTimeMillis() - startTime}")
+        resizePreviewHeight(true)
+      }
+    }
+  }
+
+  private var hasObserveCameraState = false
+
+  private fun resizePreviewHeight(anim: Boolean = false) {
+    Log.d(TAG, "[sfs] anim:$anim")
+    if (anim) {
+      Log.d(TAG, "[sfs] mLastPreviewHeight:$mLastPreviewHeight, mPreviewHeight:$mPreviewHeight")
+      if (mLastPreviewHeight != mPreviewHeight) {
+        val heightAnim = ValueAnimator.ofInt(mLastPreviewHeight, mPreviewHeight)
+        heightAnim.addUpdateListener {
+          val animatedValue = it.animatedValue as Int
+          mLastPreviewHeight = animatedValue
+          Log.d(TAG, "[sfs] animatedValue:$animatedValue")
+          binding.vPreviewContainer.apply {
+            val params = layoutParams as RelativeLayout.LayoutParams
+            params.height = animatedValue
+            layoutParams = params
+          }
+          if (mPreviewHeight > mLastPreviewHeight) {
+            if (animatedValue >= mPreviewHeight) {
+              binding.apply {
+                vPlaceholder.gone()
+                vPlaceholder.setImageBitmap(null)
+                vPreviewView.visible()
+              }
+            }
+          } else {
+            if (animatedValue <= mPreviewHeight) {
+              binding.apply {
+                vPlaceholder.gone()
+                vPlaceholder.setImageBitmap(null)
+                vPreviewView.visible()
+              }
+            }
+          }
+        }
+        heightAnim.duration = 300
+        heightAnim.start()
+      }
+
+      Log.d(TAG, "[sfs] mLastTopMargin:$mLastTopMargin, mTopMargin:$mTopMargin")
+      if (mLastTopMargin != mTopMargin) {
+        val topMargin = ValueAnimator.ofInt(mLastTopMargin, mTopMargin)
+        topMargin.addUpdateListener {
+          val animatedValue = it.animatedValue as Int
+          mLastTopMargin = animatedValue
+          binding.vPreviewContainer.apply {
+            val params = layoutParams as RelativeLayout.LayoutParams
+            params.topMargin = animatedValue
+            layoutParams = params
+          }
+        }
+        topMargin.duration = 300
+        topMargin.start()
+      }
+    } else {
+      binding.vPreviewContainer.apply {
+        val params = layoutParams as RelativeLayout.LayoutParams
+        params.height = mPreviewHeight
+        params.topMargin = mTopMargin
+        layoutParams = params
+      }
+    }
+  }
+
+  private fun getPreviewContainerTopMargin(@PreviewRatio.Ratio ratio: Int): Int {
+    return when (ratio) {
       PreviewRatio.RATIO_FULL_SCREEN -> 0
       PreviewRatio.RATIO_16_9 -> (mScreenHeight - mScreenHeight_16_9) * 3 / 5
       PreviewRatio.RATIO_4_3 -> (mScreenHeight - mScreenHeight_16_9) * 3 / 5
       PreviewRatio.RATIO_1_1 -> (mScreenHeight - mScreenWidth) / 3
       else -> (mScreenHeight - mPreviewHeight) / 2
     }
-    Log.d(TAG, "[sfs] topMargin:$topMargin")
-    binding.vPreviewContainer.apply {
-      val params = layoutParams as RelativeLayout.LayoutParams
-      params.height = mPreviewHeight
-      params.topMargin = topMargin
-      layoutParams = params
-    }
   }
 
   private fun changePreviewRatio() {
+    mLastPreviewHeight = getPreviewHeightByRatio(mPreviewRatio)
+    mLastTopMargin = getPreviewContainerTopMargin(mPreviewRatio)
     when (mPreviewRatio) {
       PreviewRatio.RATIO_FULL_SCREEN -> {
         mPreviewRatio = PreviewRatio.RATIO_16_9
         binding.vChangePreviewRatio.text = "16:9"
-        showPlaceholderImage(true)
-        resizePreviewHeight()
-        bindCamera()
       }
       PreviewRatio.RATIO_16_9 -> {
         mPreviewRatio = PreviewRatio.RATIO_4_3
         binding.vChangePreviewRatio.text = "4:3"
-        showPlaceholderImage(true)
-        resizePreviewHeight()
-        bindCamera()
       }
       PreviewRatio.RATIO_4_3 -> {
         mPreviewRatio = PreviewRatio.RATIO_1_1
         binding.vChangePreviewRatio.text = "1:1"
-        showPlaceholderImage(true)
-        resizePreviewHeight()
-        bindCamera()
       }
       PreviewRatio.RATIO_1_1 -> {
         mPreviewRatio = PreviewRatio.RATIO_FULL_SCREEN
         binding.vChangePreviewRatio.text = "全屏"
-        showPlaceholderImage(true)
-        resizePreviewHeight()
-        bindCamera()
       }
     }
+    mPreviewHeight = getPreviewHeightByRatio(mPreviewRatio)
+    mTopMargin = getPreviewContainerTopMargin(mPreviewRatio)
+    showPlaceholderImage(true)
+    bindCamera()
   }
 
   fun takePicture() {
@@ -202,8 +283,7 @@ class CameraActivity : BaseActivity() {
       return
     }
 
-    initPreviewRatio()
-    initRotation()
+    initCameraConfig()
     val preview = getPreview()
     val cameraSelector = getCameraSelector()
     val imageAnalysis = getImageAnalysis()
@@ -219,9 +299,8 @@ class CameraActivity : BaseActivity() {
     observeCameraState(mCamera?.cameraInfo)
   }
 
-  private fun initPreviewRatio() {
-    mPreviewWidth = mScreenWidth
-    mPreviewHeight = when (mPreviewRatio) {
+  private fun getPreviewHeightByRatio(@PreviewRatio.Ratio ratio: Int): Int {
+    return when (ratio) {
       PreviewRatio.RATIO_16_9 -> mScreenHeight_16_9
       PreviewRatio.RATIO_4_3 -> mScreenHeight_4_3
       PreviewRatio.RATIO_1_1 -> mScreenWidth
@@ -229,7 +308,9 @@ class CameraActivity : BaseActivity() {
     }
   }
 
-  private fun initRotation() {
+  private fun initCameraConfig() {
+    mPreviewWidth = mScreenWidth
+    mPreviewHeight = getPreviewHeightByRatio(mPreviewRatio)
     val display: Display? = binding.vPreviewView.display
     mRotation = display?.rotation ?: Surface.ROTATION_0
   }
@@ -277,30 +358,6 @@ class CameraActivity : BaseActivity() {
       .build()
     return mImageCapture!!
   }
-
-  var startTime = 0L
-
-  private fun showPlaceholderImage(show: Boolean) {
-    binding.apply {
-      if (show) {
-        startTime = System.currentTimeMillis()
-        val bitmap = vPreviewView.bitmap//BitmapBlurUtil.blur(vPreviewView.bitmap)
-        Log.e(TAG, "[sfs] get bitmap time: ${System.currentTimeMillis() - startTime}")
-        vPlaceholder.visible()
-        vPlaceholder.setImageBitmap(bitmap)
-        vFlash.visible()
-        vFlash.setBackgroundColor(resources.getColor(R.color.transparent30_white))
-      } else {
-        Log.e(TAG, "[sfs] switch camera time: ${System.currentTimeMillis() - startTime}")
-        vPlaceholder.gone()
-        vPlaceholder.setImageBitmap(null)
-        vFlash.gone()
-        vFlash.setBackgroundColor(resources.getColor(R.color.white))
-      }
-    }
-  }
-
-  private var hasObserveCameraState = false
 
   private fun observeCameraState(cameraInfo: CameraInfo?) {
     if (hasObserveCameraState) {

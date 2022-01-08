@@ -9,11 +9,11 @@ import android.graphics.Bitmap;
 public class BitmapBlurUtil {
 
   // 水平方向模糊度
-  private static final float hRadius = 5;
+  private static final float hRadius = 20;
   // 竖直方向模糊度
-  private static final float vRadius = 5;
+  private static final float vRadius = 20;
   // 模糊迭代度
-  private static final int iterations = 5;
+  private static final int iterations = 20;
 
   public static Bitmap blur(Bitmap bmp) {
     if (bmp == null) {

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
@@ -43,6 +44,21 @@
     android:background="@color/transparent30"
     android:gravity="center"
     android:text="全屏"
+    android:textColor="@color/white"
+    tools:ignore="HardcodedText" />
+
+
+  <TextView
+    android:id="@+id/v_video_capture"
+    android:layout_width="50dp"
+    android:layout_height="50dp"
+    android:layout_alignParentBottom="true"
+    android:layout_marginEnd="30dp"
+    android:layout_marginBottom="50dp"
+    android:layout_toStartOf="@+id/v_take_picture"
+    android:background="@color/transparent30"
+    android:gravity="center"
+    android:text="录像"
     android:textColor="@color/white"
     tools:ignore="HardcodedText" />
 
