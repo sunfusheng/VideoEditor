@@ -50,7 +50,7 @@
 
   <TextView
     android:id="@+id/v_video_capture"
-    android:layout_width="50dp"
+    android:layout_width="100dp"
     android:layout_height="50dp"
     android:layout_alignParentBottom="true"
     android:layout_marginEnd="30dp"
@@ -58,7 +58,7 @@
     android:layout_toStartOf="@+id/v_take_picture"
     android:background="@color/transparent30"
     android:gravity="center"
-    android:text="录像"
+    android:text="开始录像"
     android:textColor="@color/white"
     tools:ignore="HardcodedText" />
 

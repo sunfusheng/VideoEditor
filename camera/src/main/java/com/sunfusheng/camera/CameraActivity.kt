@@ -2,6 +2,7 @@ package com.sunfusheng.camera
 
 import android.Manifest
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
@@ -31,6 +32,7 @@ import java.util.concurrent.Executors
  * @author sunfusheng
  * @since  2022/01/01
  */
+@SuppressLint("RestrictedApi")
 class CameraActivity : BaseActivity() {
 
   private val binding by viewBinding<ActivityCameraBinding>()
@@ -41,6 +43,7 @@ class CameraActivity : BaseActivity() {
   private var mCameraSelector: CameraSelector? = null
   private var mImageAnalysis: ImageAnalysis? = null
   private var mImageCapture: ImageCapture? = null
+  private var mVideoCapture: VideoCapture? = null
   private var mCamera: Camera? = null
   private val mCameraExecutor by lazy { Executors.newSingleThreadExecutor() }
   private var isFrontCamera = false
@@ -55,6 +58,8 @@ class CameraActivity : BaseActivity() {
   private var mTopMargin = 0
   private var mLastTopMargin = 0
   private var mRotation = Surface.ROTATION_0
+  private var isTakeCapture = true
+  private var isVideoRecording = false
 
   companion object {
     private const val TAG = "CameraActivity"
@@ -105,6 +110,10 @@ class CameraActivity : BaseActivity() {
     resizePreviewHeight(false)
     binding.apply {
       vTakePicture.setOnClickListener {
+        if (!isTakeCapture) {
+          isTakeCapture = true
+          bindCamera()
+        }
         takePicture()
       }
       vSwitchCamera.setOnClickListener {
@@ -115,7 +124,17 @@ class CameraActivity : BaseActivity() {
         changePreviewRatio()
       }
       vVideoCapture.setOnClickListener {
-
+        if (isTakeCapture) {
+          isTakeCapture = false
+          bindCamera()
+        }
+        if (isVideoRecording) {
+          vVideoCapture.text = "开始录像"
+          stopRecording()
+        } else {
+          vVideoCapture.text = "停止录像"
+          startRecording()
+        }
       }
     }
   }
@@ -258,6 +277,34 @@ class CameraActivity : BaseActivity() {
       })
   }
 
+  @SuppressLint("MissingPermission")
+  fun startRecording() {
+    val videoCapture = mVideoCapture ?: return
+    isVideoRecording = true
+    val outputFileOptions = VideoCapture.OutputFileOptions
+      .Builder(CameraFileUtil.getVideoFile())
+      .build()
+    videoCapture.startRecording(outputFileOptions, mCameraExecutor,
+
+      object : VideoCapture.OnVideoSavedCallback {
+        override fun onVideoSaved(outputFileResults: VideoCapture.OutputFileResults) {
+          runOnUiThread {
+            ToastUtil.toast("${outputFileResults.savedUri}")
+          }
+        }
+
+        override fun onError(videoCaptureError: Int, message: String, cause: Throwable?) {
+          Log.e(TAG, "[sfs] start recording error: ${cause?.message}")
+        }
+      })
+  }
+
+  fun stopRecording() {
+    val videoCapture = mVideoCapture ?: return
+    isVideoRecording = false
+    videoCapture.stopRecording()
+  }
+
   private fun flash() {
     binding.vFlash.visible()
     binding.vFlash.postDelayed({ binding.vFlash.gone() }, 50)
@@ -288,13 +335,15 @@ class CameraActivity : BaseActivity() {
     val cameraSelector = getCameraSelector()
     val imageAnalysis = getImageAnalysis()
     val imageCapture = getImageCapture()
+    val videoCapture = getVideoCapture()
+    val imageOrVideo = if (isTakeCapture) imageCapture else videoCapture
     cameraProvider.unbindAll()
     mCamera = cameraProvider.bindToLifecycle(
       this as LifecycleOwner,
       cameraSelector,
       preview,
       imageAnalysis,
-      imageCapture
+      imageOrVideo
     )
     observeCameraState(mCamera?.cameraInfo)
   }
@@ -357,6 +406,17 @@ class CameraActivity : BaseActivity() {
       .setTargetRotation(mRotation)
       .build()
     return mImageCapture!!
+  }
+
+  private fun getVideoCapture(): VideoCapture {
+    mVideoCapture = VideoCapture.Builder()
+      .setTargetResolution(Size(mPreviewWidth, mPreviewHeight))
+      .setTargetRotation(mRotation)
+      .setBitRate(1024 * 1024)
+      .setAudioBitRate(1024 * 512)
+      .setVideoFrameRate(50)
+      .build()
+    return mVideoCapture!!
   }
 
   private fun observeCameraState(cameraInfo: CameraInfo?) {
