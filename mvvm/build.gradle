@@ -43,11 +43,12 @@ dependencies {
   api "com.google.android.material:material:$material_version"
   api "androidx.constraintlayout:constraintlayout:$constraintlayout_version"
   api "androidx.recyclerview:recyclerview:$recyclerview_version"
+  api "androidx.startup:startup-runtime:$startup_version"
 
   api "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
   api "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
   api "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
   api "androidx.lifecycle:lifecycle-viewmodel-savedstate:$lifecycle_version"
 
-  api 'com.guolindev.permissionx:permissionx:1.6.1'
+  api "com.guolindev.permissionx:permissionx:$permissionx_version"
 }
