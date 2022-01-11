@@ -16,6 +16,5 @@
         android:name="com.sunfusheng.mvvm.ContextHolderInitializer"
         android:value="androidx.startup" />
     </provider>
-
   </application>
 </manifest>

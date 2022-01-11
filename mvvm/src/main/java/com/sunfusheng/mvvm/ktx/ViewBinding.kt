@@ -3,10 +3,11 @@ package com.sunfusheng.mvvm.ktx
 import android.app.Dialog
 import android.view.LayoutInflater
 import android.view.View
-import androidx.activity.ComponentActivity
+import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.*
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.viewbinding.ViewBinding
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -23,6 +24,29 @@ inline fun <reified VB : ViewBinding> FragmentActivity.viewBinding() = lazy {
 inline fun <reified VB : ViewBinding> Dialog.viewBinding() = lazy {
   inflateBinding<VB>(layoutInflater).apply { setContentView(root) }
 }
+
+inline fun <reified VB : ViewBinding> ViewGroup.viewBinding(
+  attachToParent: Boolean = false
+) = lazy {
+  inflateBinding<VB>(
+    LayoutInflater.from(context),
+    if (attachToParent) this else null,
+    attachToParent
+  )
+}
+
+inline fun <reified VB : ViewBinding> ViewGroup.viewBinding() =
+  inflateBinding<VB>(LayoutInflater.from(context), this, true)
+
+inline fun <reified VB : ViewBinding> inflateBinding(
+  layoutInflater: LayoutInflater, parent: ViewGroup?, attachToParent: Boolean
+) = VB::class.java.getMethod(
+  "inflate",
+  LayoutInflater::class.java,
+  ViewGroup::class.java,
+  Boolean::class.java
+)
+  .invoke(null, layoutInflater, parent, attachToParent) as VB
 
 inline fun <reified VB : ViewBinding> inflateBinding(layoutInflater: LayoutInflater) =
   VB::class.java.getMethod("inflate", LayoutInflater::class.java).invoke(null, layoutInflater) as VB
