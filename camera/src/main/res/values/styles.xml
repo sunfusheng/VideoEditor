@@ -5,4 +5,8 @@
     <item name="android:windowAnimationStyle">@style/WindowFadeInOut</item>
   </style>
 
+  <style name="CaptureIndexTextAppearanceStyle">
+    <item name="android:textSize">16sp</item>
+    <item name="android:textStyle">bold</item>
+  </style>
 </resources>

@@ -13,7 +13,7 @@ import com.sunfusheng.mvvm.ContextHolder
 object ScreenUtil {
 
   private val mWindowManager by lazy {
-    ContextHolder.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager?
+    ContextHolder.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
   }
 
   fun getScreenWidth(): Int {
@@ -25,16 +25,14 @@ object ScreenUtil {
   }
 
   fun getRealScreenWidth(): Int {
-    val wm = mWindowManager ?: return getScreenWidth()
-    val outMetrics = DisplayMetrics()
-    wm.defaultDisplay.getRealMetrics(outMetrics)
-    return outMetrics.widthPixels
+    val dm = DisplayMetrics()
+    mWindowManager.defaultDisplay.getRealMetrics(dm)
+    return dm.widthPixels
   }
 
   fun getRealScreenHeight(): Int {
-    val wm = mWindowManager ?: return getScreenHeight()
-    val outMetrics = DisplayMetrics()
-    wm.defaultDisplay.getRealMetrics(outMetrics)
-    return outMetrics.heightPixels
+    val dm = DisplayMetrics()
+    mWindowManager.defaultDisplay.getRealMetrics(dm)
+    return dm.heightPixels
   }
 }

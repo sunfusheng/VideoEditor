@@ -15,5 +15,11 @@
       android:layout_height="wrap_content"
       android:layout_marginTop="20dp" />
 
+    <com.sunfusheng.camera.view.CaptureIndexView
+      android:id="@+id/v_capture_index"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="20dp" />
+
   </LinearLayout>
 </ScrollView>

@@ -336,14 +336,14 @@ class CameraActivity : BaseActivity() {
     val imageAnalysis = getImageAnalysis()
     val imageCapture = getImageCapture()
     val videoCapture = getVideoCapture()
-    val imageOrVideo = if (isTakeCapture) imageCapture else videoCapture
+    val captureUseCase = if (isTakeCapture) imageCapture else videoCapture
     cameraProvider.unbindAll()
     mCamera = cameraProvider.bindToLifecycle(
       this as LifecycleOwner,
       cameraSelector,
       preview,
       imageAnalysis,
-      imageOrVideo
+      captureUseCase
     )
     observeCameraState(mCamera?.cameraInfo)
   }
